@@ -1,0 +1,4 @@
+-r base.txt
+gunicorn==20.0.4  # Боевой http-сервер для python-приложений
+psycopg2-binary==2.8.6
+dj-config-url==0.1.1

@@ -1,0 +1,65 @@
+version: '3.7'
+
+services:
+  auth:
+    build: .
+    container_name: identity_provider
+    ports:
+    - 9999:9999
+    depends_on:
+      - redis
+      - postgres
+    environment:
+      PRIVATE_KEY: |-
+        -----BEGIN RSA PRIVATE KEY-----
+        MIIEowIBAAKCAQEA19RTsWM6yhu26erx5NEQFTsbULLJwe754b8W9Xbbq8zCwjMG
+        XXvJsIfqSwQrMWy/4VC5HQ+aA1ueM610qU+kmxfGl3RM8Ze6NjaMt2i9wGirB0rK
+        NplINB9tnHfhyWniUTADf+TtoU6/4LxsuZRF+xc6MkB96hFEFCupJQE3rDhJuKI4
+        1FrepO+gCi7pSKMAjMZAeeMb7PWUQ+gDBewCP8PciRIL2L6xsypMswduCrHDiWpB
+        n8aykFsYWs2gWal7tXn1weQ5dFTJoA4i8zOTzKPIDDplr9xe5zkhzEtEF2zRPvar
+        r3rMx/8THWX4GheiyZFdd3wA28FprUEGOECK6wIDAQABAoIBAEmx0L/1k2nWS78U
+        f3LzZavyKjIEUjq7aCxKTMMUyg4f1PJtbMN31JbH2dqyejMeoGgFYafIH3z9CAg6
+        NmbncFuaoy8swWcOuUDwoFyx0XTE6H0Nbv10mkBd6NXv4zMcSfAR1mgRmYgmNQM+
+        I1u8gqapODBXcAb/zUCb5d3iTAmr8AaSPd9Ksr3DBd/fXdNMaCdpmKktjsy3F4Yg
+        LV8gcgdRKnT3752DvB7xDyrN3UWoDKhh3PVNh69GiMtCKkoyN8UbK95cwKTVbOBH
+        KW2MHmU+pwCl2ocbGY7464QLD73bNrEXugaOydpxMYNLWo7dGIj+G6mB2l07I72F
+        EYORfwUCgYEA5oh2IlFC+tjOQSCkl4Zr2TfLimb5evFZjHzQEfyAefsrVHUsxChi
+        O9Yz9qLYS9wmOSuwBS6SDy7Gl18LysbBZDMdJKUymKX1js5Y3FQBpQs7qTwAZTnl
+        wisOf3CHr27x9NWiNuqtMgbaffy8XZCNmIe8kcCty/mqEtPFpqDIxJUCgYEA76wK
+        ytMBz2T9THXsnafmkI3SeE/CgoJVqmDomM1FMeMChrzZczaT5ETnk8c4ErQDOoJx
+        sk0yulUIl1EZukvur/qKhSq2V2TvEalF1IQq2J7bcGf8gmudROogkqPl/q+BL9FD
+        iPCnr/wNj1bMZQMvc/2s6IBuQp8pOeMfU4bMsX8CgYEAtdl1XrK9ZET7xlIqo8CM
+        eIfTznRWXg3edrzKITYOXqqrzm60BnRYsRzSVr60Ynrhx/1XV28aFlHuo9983NMW
+        IKVVWt/ZXqKjZqgNXpgByCBpSqEjKraWMClowUySK+gXguu2jx1ly+2uEu335NKv
+        b1+7dzoHnrxt1XYqFrwEQ1UCgYAhpRUew+BNLPAh+6vrtdY4FLCnEwtLJuC/ujrs
+        uGQuTJ/eKkScV90K/mFD7YOBnKOXYxhy30NvxOAf3dKuxFoNei5X41cVjaXB5PFY
+        k/Uv050aen6IEHNTaUqJS1jOF/UasVW5s47WtZtxs82doITY05OiT+UqlQ1Egw2y
+        vAmgIQKBgCbi/dLCf0rwFycwqtg0EbXyItLH01ZtjJkmf3WIW+QtOTMLlTkg711N
+        L1IfqpRlLWgqgszJD4URCIQ0ydGyMuBefjuop0D0RkcqVoQwPPUgn6AFpjVDAI7O
+        mus9csCfThv3fTwJqxHLkipOnkTgnzGjDSncsqdSH0YssYKdefzf
+        -----END RSA PRIVATE KEY-----
+    restart: always
+
+  redis:
+    image: redis:latest
+    container_name: redis_auth
+    expose:
+      - 6379
+    restart: always
+
+  postgres:
+    image: postgres:13.1
+    container_name: postgres_auth
+    expose:
+      - 5432
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: auth
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      - pg_data:/var/lib/postgresql/data/pgdata
+
+volumes:
+  pg_data:

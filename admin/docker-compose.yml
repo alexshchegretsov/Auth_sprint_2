@@ -1,0 +1,45 @@
+version: "3"
+
+services:
+  django:
+    build: .
+    container_name: django_app
+    command: gunicorn --workers 3 --bind 0.0.0.0:8000 config.wsgi:application
+    environment:
+      DATABASE_URL: postgres://postgres:postgres@postgres/movies
+    volumes:
+    - static_data:/app/staticfiles
+    restart: always
+    depends_on:
+      - postgres
+
+  postgres:
+    image: postgres:13.1
+    container_name: postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: movies
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+    - pg_data:/var/lib/postgresql/data/pgdata
+    - ./conf/postgres:/docker-entrypoint-initdb.d
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_server
+    ports:
+    - 80:80    # check if 80 port is free locally, otherwise use <free port>:80
+    volumes:
+    - ./conf/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    - ./conf/nginx/django_api/django_api.conf:/etc/nginx/conf.d/django_api.conf:ro
+    - /var/log/nginx/movies:/var/log/nginx
+    - static_data:/static
+    restart: always
+    depends_on:
+      - django
+
+volumes:
+  static_data:
+  pg_data:
