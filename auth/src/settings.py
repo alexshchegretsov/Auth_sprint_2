@@ -1,11 +1,13 @@
 import os
+from logging import config as logging_config
+
+# logging
+logging_config.fileConfig('logging.ini')
+AUTH_LOGGER_NAME = 'authLogger'
 
 # postgres settings
 SQLALCHEMY_DATABASE_URI = os.getenv('SQLALCHEMY_DATABASE_URI')
-# SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://postgres:postgres@localhost:5432/auth'
-# SQLALCHEMY_DATABASE_URI = 'postgresql+psycopg2://postgres:postgres@postgres:5432/auth'
 SQLALCHEMY_DATABASE_URI_ASYNC = os.getenv('SQLALCHEMY_DATABASE_URI_ASYNC')
-# SQLALCHEMY_DATABASE_URI_ASYNC = 'postgresql+asyncpg://postgres:postgres@localhost:5432/auth'
 
 # redis settings
 REDIS_HOST = os.getenv('REDIS_HOST', '127.0.0.1')
@@ -15,7 +17,7 @@ REDIS_CACHE_DB = 3
 SECRET_KEY = 'OurSup3rS3cr3tK3y'
 
 JWT_ALGORITHM = 'RS256'
-JWT_EXP_DELTA_SECONDS = 1300
+JWT_EXP_DELTA_SECONDS = 300
 
 RESPONSE_COMPRESS_LEVEL = 1
 DEFAULT_HEADERS = {
@@ -27,17 +29,16 @@ DEFAULT_HEADERS = {
 }
 
 PRIVATE_KEY = os.getenvb(b'PRIVATE_KEY')
-PUBLIC_KEY = b"""-----BEGIN PUBLIC KEY-----
-MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA19RTsWM6yhu26erx5NEQ
-FTsbULLJwe754b8W9Xbbq8zCwjMGXXvJsIfqSwQrMWy/4VC5HQ+aA1ueM610qU+k
-mxfGl3RM8Ze6NjaMt2i9wGirB0rKNplINB9tnHfhyWniUTADf+TtoU6/4LxsuZRF
-+xc6MkB96hFEFCupJQE3rDhJuKI41FrepO+gCi7pSKMAjMZAeeMb7PWUQ+gDBewC
-P8PciRIL2L6xsypMswduCrHDiWpBn8aykFsYWs2gWal7tXn1weQ5dFTJoA4i8zOT
-zKPIDDplr9xe5zkhzEtEF2zRPvarr3rMx/8THWX4GheiyZFdd3wA28FprUEGOECK
-6wIDAQAB
------END PUBLIC KEY-----"""
+PUBLIC_KEY = os.getenvb(b'PUBLIC_KEY')
 
-API_KEY_GITHUB = 'a430f910eb46594141d9'
-API_SECRET_KEY_GITHUB = '8f0de9638dc861b34b6b808f0490dc50896406ee'
+API_KEY_GITHUB = os.getenv('API_KEY_GITHUB')
+API_SECRET_KEY_GITHUB = os.getenv('API_SECRET_KEY_GITHUB')
 GITHUB_USER_URL = 'https://api.github.com/user'
 GITHUB_SOCIAL_NAME = 'github'
+
+RE_CAPTCHA_SITE_KEY = '6LewmYEaAAAAANFp6178YKPkK7X8rcyWRm1ftDo5'
+RE_CAPTCHA_SECRET_KEY = '6LewmYEaAAAAANylz0DuZDxJwKqaGPX0xUVkIEZO'
+RE_CAPTCHA_VERIFY_URL = 'https://www.google.com/recaptcha/api/siteverify'
+
+RATE_LIMIT_ATTEMPTS = 5
+RATE_LIMIT_TIME_INTERVAL = 60 * 20  # sec

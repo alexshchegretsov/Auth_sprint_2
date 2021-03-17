@@ -1,8 +1,7 @@
 import datetime as dt
 import uuid
 
-from sqlalchemy import (Column, DateTime, ForeignKey, Index, String,
-                        UniqueConstraint, Boolean)
+from sqlalchemy import Column, DateTime, ForeignKey, Index, String, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship

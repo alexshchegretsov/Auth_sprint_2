@@ -5,10 +5,10 @@ from aiohttp import web
 from aiohttp_oauth2.client.contrib import github
 from sqlalchemy.ext.asyncio import create_async_engine
 
+from oauth_callbacks import on_github_login
 from settings import (API_KEY_GITHUB, API_SECRET_KEY_GITHUB, DEFAULT_HEADERS,
                       REDIS_CACHE_DB, REDIS_HOST, REDIS_PORT,
                       SQLALCHEMY_DATABASE_URI_ASYNC)
-from oauth_callbacks import on_github_login
 
 
 class ApiRouter(web.UrlDispatcher):

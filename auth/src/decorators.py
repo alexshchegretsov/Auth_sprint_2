@@ -1,29 +1,30 @@
+import datetime as dt
 import gzip
 import json
 import logging
-import sys
 
 import jwt
-from aiohttp import web
+from aiohttp import ClientSession, web
 from py_auth_header_parser import parse_auth_header
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from yarl import URL
 
-from exceptions import AccessDenied, ApiException, InvalidRequestParams
 from models import User
-from settings import (DEFAULT_HEADERS, JWT_ALGORITHM, PUBLIC_KEY,
-                      RESPONSE_COMPRESS_LEVEL)
-from utils import make_password
+from settings import (AUTH_LOGGER_NAME, DEFAULT_HEADERS, JWT_ALGORITHM,
+                      PUBLIC_KEY, RATE_LIMIT_ATTEMPTS,
+                      RATE_LIMIT_TIME_INTERVAL, RE_CAPTCHA_SECRET_KEY,
+                      RE_CAPTCHA_VERIFY_URL, RESPONSE_COMPRESS_LEVEL)
+from utils import get_device, make_password
 
-logger = logging.getLogger(__file__)
-logger.setLevel(logging.INFO)
+logger = logging.getLogger(AUTH_LOGGER_NAME)
 
-formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-stdout_handler = logging.StreamHandler(sys.stdout)
-stdout_handler.setLevel(logging.INFO)
-stdout_handler.setFormatter(formatter)
-logger.addHandler(stdout_handler)
+def _create_unique_key(request):
+    user_agent = request.headers.get('user-agent', '')
+    host = request.headers.get('host', '')
+    device_type = get_device(user_agent)
+    return '_'.join([x.lower() for x in (device_type, host, user_agent)])
 
 
 async def _load_user_by_id(session, user_id):
@@ -31,7 +32,7 @@ async def _load_user_by_id(session, user_id):
     res = await session.execute(stmt)
     res = res.fetchall()
     if len(res) != 1:
-        raise AccessDenied('No users found')
+        raise web.HTTPForbidden(text='No users found')
 
     user = res[0][0]
     return user
@@ -42,18 +43,15 @@ async def _load_user_by_email_pass(conn, email, password):
     res = await conn.execute(stmt)
     res = res.fetchall()
     if len(res) != 1:
-        raise AccessDenied('No users found')
+        raise web.HTTPForbidden(text='No users found')
 
     user = res[0][0]
     return user
 
 
 def _prepare_response(res, status_code):
-    if status_code == 200:
-        response = {"status": "success", "data": res}
-    else:
-        response = {"status": "error", "message": res}
-    return response
+    status = 'success' if status_code == 200 else 'error'
+    return {'status': status, 'data': res}
 
 
 async def log_request(request):
@@ -72,7 +70,8 @@ def gzipped_rest_api_response(coroutine):
     async def wrapper(request):
         await log_request(request)
 
-        res, status_code = await coroutine(request)
+        res = await coroutine(request)
+        status_code = res['status_code']
         response = _prepare_response(res, status_code)
 
         if 'gzip' in request.headers.get('ACCEPT-ENCODING', ''):
@@ -92,14 +91,20 @@ def gzipped_rest_api_response(coroutine):
 
 def error_handler(coroutine):
     async def wrapper(request, *args):
+        _res = {}
         try:
             res = await coroutine(request, *args)
-        except ApiException as ex:
-            return str(ex), ex.status_code
+        except web.HTTPException as ex:
+            _res['message'] = ex.text
+            _res['status_code'] = ex.status_code
         except Exception as ex:
             logger.error(ex)
-            return 'Server Error 500', 500
-        return res, 200
+            _res['message'] = 'Server Error 500'
+            _res['status_code'] = 500
+        else:
+            _res['result'] = res
+            _res['status_code'] = 200
+        return _res
 
     return wrapper
 
@@ -130,7 +135,7 @@ def auth_by_jwt(load_user=False):
                 payload = jwt.decode(jwt_token, PUBLIC_KEY, algorithms=[JWT_ALGORITHM])
                 request.token_payload = payload
             except (jwt.DecodeError, jwt.ExpiredSignatureError):
-                raise InvalidRequestParams('Token is missing or invalid')
+                raise web.HTTPBadRequest(text='Token is missing or invalid')
 
             if load_user:
                 request.user = await _load_user_by_id(request.conn, payload['user_id'])
@@ -150,12 +155,64 @@ def auth_by_password(coroutine):
         password = post_data.get('password', None)
 
         if not email or not password:
-            raise InvalidRequestParams('No login data')
+            raise web.HTTPBadRequest(text='No login data')
 
         password = make_password(password, email)
-
         user = await _load_user_by_email_pass(request.conn, email, password)
         request.user = user
+        request.re_captcha_response = post_data.get('g-recaptcha-response')
+        res = await coroutine(request, *args)
+        return res
+
+    return wrapper
+
+
+def login_rate_limit_handler(coroutine):
+    async def wrapper(request, *args):
+        res = await coroutine(request, *args)
+        status_code = res.get('status_code', 200)
+
+        if 400 <= status_code < 500:
+            key = _create_unique_key(request)
+            t_stamp_now = int(dt.datetime.now().timestamp())
+
+            with await request.app['redis'] as r:
+                await r.sadd(key, t_stamp_now, expire=RATE_LIMIT_TIME_INTERVAL)
+                data = await r.get(key)
+
+                expired_t = [t for t in data if (t_stamp_now - t) > RATE_LIMIT_TIME_INTERVAL]
+                data.difference_update(expired_t)
+                await r.rem(key, expired_t)
+
+            res['rate_limit_exceed'] = False if len(data) <= RATE_LIMIT_ATTEMPTS else True
+        return res
+
+    return wrapper
+
+
+def verify_re_captcha(coroutine):
+    async def wrapper(request, *args):
+        re_captcha_response = request.get('re_captcha_response')
+
+        if re_captcha_response is not None:
+            peername = request.transport.get_extra_info('peername', None)
+            remote_ip = None
+
+            if peername is not None:
+                remote_ip, _ = peername
+
+            url = URL(RE_CAPTCHA_VERIFY_URL).with_query(
+                secret=RE_CAPTCHA_SECRET_KEY,
+                response=re_captcha_response,
+                remoteip=remote_ip
+            )
+
+            async with ClientSession() as session:
+                async with session.get(url) as resp:
+                    resp = await resp.json()
+
+            if not resp.get('success'):
+                raise web.HTTPBadRequest(text='Invalid captcha')
 
         res = await coroutine(request, *args)
         return res

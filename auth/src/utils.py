@@ -5,13 +5,15 @@ from typing import List
 
 import aioredis
 import jwt
+from aiohttp import ClientSession, web
 from sqlalchemy import desc, select
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
+from yarl import URL
 
-from exceptions import InvalidRequestParams
 from misc import DeviceType
 from models import SocialAccount, User, UserLoginHistory
 from settings import (JWT_ALGORITHM, JWT_EXP_DELTA_SECONDS, PRIVATE_KEY,
+                      RE_CAPTCHA_SECRET_KEY, RE_CAPTCHA_VERIFY_URL,
                       REDIS_CACHE_DB, REDIS_HOST, REDIS_PORT, SECRET_KEY,
                       SQLALCHEMY_DATABASE_URI_ASYNC)
 
@@ -102,7 +104,7 @@ def get_uuid():
 async def change_user_password(request, current_password, new_password):
     _current_password = make_password(current_password, request.user.email)
     if _current_password != request.user.password:
-        raise InvalidRequestParams('Invalid current password')
+        raise web.HTTPBadRequest(text='Invalid current password')
 
     _new_password = make_password(new_password, request.user.email)
     request.user.password = _new_password
@@ -111,12 +113,12 @@ async def change_user_password(request, current_password, new_password):
 
 async def register_user(request, email, password):
     if not email or not password:
-        raise InvalidRequestParams('No register data')
+        raise web.HTTPBadRequest(text='No register data')
 
     password = make_password(password, email)
 
     if await is_user_exists(request.conn, email, password):
-        raise InvalidRequestParams('User already exists')
+        raise web.HTTPBadRequest(text='User already exists')
 
     return await create_new_user(request.conn, email, password)
 
@@ -152,3 +154,4 @@ async def massive_logout(request, user_id) -> None:
         refresh_tokens = await r.smembers(user_id)
         await r.delete(*refresh_tokens)
         await r.srem(user_id, *refresh_tokens)
+

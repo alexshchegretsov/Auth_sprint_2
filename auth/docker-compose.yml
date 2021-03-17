@@ -10,6 +10,12 @@ services:
       - redis
       - postgres
     environment:
+      REDIS_HOST: ${REDIS_HOST}
+      REDIS_PORT: ${REDIS_PORT}
+      SQLALCHEMY_DATABASE_URI_ASYNC: ${SQLALCHEMY_DATABASE_URI_ASYNC}
+      SQLALCHEMY_DATABASE_URI: ${SQLALCHEMY_DATABASE_URI}
+      API_KEY_GITHUB: ${API_KEY_GITHUB}
+      API_SECRET_KEY_GITHUB: ${API_SECRET_KEY_GITHUB}
       PRIVATE_KEY: |-
         -----BEGIN RSA PRIVATE KEY-----
         MIIEowIBAAKCAQEA19RTsWM6yhu26erx5NEQFTsbULLJwe754b8W9Xbbq8zCwjMG
@@ -38,6 +44,16 @@ services:
         L1IfqpRlLWgqgszJD4URCIQ0ydGyMuBefjuop0D0RkcqVoQwPPUgn6AFpjVDAI7O
         mus9csCfThv3fTwJqxHLkipOnkTgnzGjDSncsqdSH0YssYKdefzf
         -----END RSA PRIVATE KEY-----
+      PUBLIC_KEY: |-
+        -----BEGIN PUBLIC KEY-----
+        MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA19RTsWM6yhu26erx5NEQ
+        FTsbULLJwe754b8W9Xbbq8zCwjMGXXvJsIfqSwQrMWy/4VC5HQ+aA1ueM610qU+k
+        mxfGl3RM8Ze6NjaMt2i9wGirB0rKNplINB9tnHfhyWniUTADf+TtoU6/4LxsuZRF
+        +xc6MkB96hFEFCupJQE3rDhJuKI41FrepO+gCi7pSKMAjMZAeeMb7PWUQ+gDBewC
+        P8PciRIL2L6xsypMswduCrHDiWpBn8aykFsYWs2gWal7tXn1weQ5dFTJoA4i8zOT
+        zKPIDDplr9xe5zkhzEtEF2zRPvarr3rMx/8THWX4GheiyZFdd3wA28FprUEGOECK
+        6wIDAQAB
+        -----END PUBLIC KEY-----
     restart: always
 
   redis:
@@ -54,10 +70,10 @@ services:
       - 5432
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-      POSTGRES_DB: auth
-      PGDATA: /var/lib/postgresql/data/pgdata
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      PGDATA: ${PGDATA}
     volumes:
       - pg_data:/var/lib/postgresql/data/pgdata
 
