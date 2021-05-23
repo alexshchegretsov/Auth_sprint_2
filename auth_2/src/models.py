@@ -1,7 +1,7 @@
 import datetime as dt
 import uuid
 
-from sqlalchemy import Column, DateTime, ForeignKey, Index, String, UniqueConstraint, Boolean
+from sqlalchemy import Column, DateTime, ForeignKey, Index, String, UniqueConstraint, Boolean, Integer
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import backref, relationship
@@ -17,6 +17,7 @@ class User(Base):
     email = Column(String, unique=True, nullable=False)
     password = Column(String, nullable=False)
     notify = Column(Boolean, default=True)
+    tz = Column(Integer, nullable=False)
     created_at = Column(DateTime, default=dt.datetime.utcnow)
 
     @property

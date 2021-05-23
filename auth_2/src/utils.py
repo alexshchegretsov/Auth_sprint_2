@@ -67,8 +67,8 @@ async def get_login_history(session, user_id) -> List[List]:
     return [list(x) for x in res]
 
 
-async def create_new_user(session, email, password) -> str:
-    user = User(email=email, password=password)
+async def create_new_user(session, email, password, timezone) -> str:
+    user = User(email=email, password=password, tz=timezone)
     session.add(user)
     await session.commit()
     return str(user.id)
@@ -111,7 +111,7 @@ async def change_user_password(request, current_password, new_password):
     await request.conn.commit()
 
 
-async def register_user(request, email, password):
+async def register_user(request, email, password, timezone):
     if not email or not password:
         raise web.HTTPBadRequest(text='No register data')
 
@@ -120,7 +120,7 @@ async def register_user(request, email, password):
     if await is_user_exists(request.conn, email, password):
         raise web.HTTPBadRequest(text='User already exists')
 
-    return await create_new_user(request.conn, email, password)
+    return await create_new_user(request.conn, email, password, timezone)
 
 
 async def set_key(request, key, value, ttl=JWT_EXP_DELTA_SECONDS) -> None:

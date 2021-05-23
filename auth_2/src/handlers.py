@@ -5,7 +5,7 @@ from aiohttp import web
 from decorators import (auth_by_jwt, auth_by_password, db_connection,
                         error_handler, gzipped_rest_api_response,
                         login_rate_limit_handler, verify_re_captcha)
-from settings import JWT_EXP_DELTA_SECONDS
+from settings import JWT_EXP_DELTA_SECONDS, DEFAULT_TZ
 from utils import (add_member_to_refresh_set, change_user_password,
                    create_login_history, delete_key, generate_jwt_token,
                    get_login_history, get_uuid, is_key_exists, massive_logout,
@@ -19,8 +19,9 @@ async def register(request) -> Dict[str, str]:
     post_data = await request.json()
     email = post_data.get('email', None)
     password = post_data.get('password', None)
+    timezone = post_data.get('tz', DEFAULT_TZ)
 
-    user_id = await register_user(request, email, password)
+    user_id = await register_user(request, email, password, timezone)
     return {'user_id': user_id}
 
 

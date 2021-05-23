@@ -27,6 +27,7 @@ DEFAULT_HEADERS = {
     'Content-Type': 'application/json',
     'Connection': 'Keep-Alive'
 }
+DEFAULT_TZ = 0
 
 PRIVATE_KEY = os.getenvb(b'PRIVATE_KEY')
 PUBLIC_KEY = os.getenvb(b'PUBLIC_KEY')
